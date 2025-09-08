@@ -1,0 +1,145 @@
+---
+# Deploy/update: ansible-playbook site.yml -e app_state=present -e local_app_src=../hello_flask
+# Undeploy:      ansible-playbook site.yml -e app_state=absent
+
+- name: Manage Flask app on EC2
+  hosts: web
+  become: true
+  gather_facts: false
+
+  vars:
+    app_state: "{{ app_state | default('present') }}"
+    app_name: hello
+    app_dir: /opt/hello-flask
+    venv_dir: /opt/hello-flask/.venv
+    service_user: hello
+    service_group: hello
+    listen_host: "0.0.0.0"
+    listen_port: "8080"
+    local_app_src: "{{ local_app_src | default('~/hello_flask') }}"
+    app_entry: "app.py"
+
+  pre_tasks:
+    - name: Ensure Python exists on fresh hosts
+      raw: test -x /usr/bin/python3 || (apt-get update -y && apt-get install -y python3 python3-apt)
+    - name: Gather facts
+      setup:
+
+  handlers:
+    - name: daemon-reload
+      systemd:
+        daemon_reload: true
+    - name: restart app
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+
+  tasks:
+    # -------- UNDEPLOY --------
+    - name: Stop service (undeploy)
+      systemd:
+        name: "{{ app_name }}"
+        state: stopped
+      ignore_errors: true
+      when: app_state == "absent"
+
+    - name: Disable service (undeploy)
+      systemd:
+        name: "{{ app_name }}"
+        enabled: false
+      ignore_errors: true
+      when: app_state == "absent"
+
+    - name: Remove systemd unit (undeploy)
+      file:
+        path: "/etc/systemd/system/{{ app_name }}.service"
+        state: absent
+      when: app_state == "absent"
+
+    - name: Reload systemd (undeploy)
+      systemd:
+        daemon_reload: true
+      when: app_state == "absent"
+
+    - name: Remove application directory (undeploy)
+      file:
+        path: "{{ app_dir }}"
+        state: absent
+      when: app_state == "absent"
+
+    - name: End play if undeploying
+      meta: end_play
+      when: app_state == "absent"
+
+    # -------- DEPLOY --------
+    - name: Install base packages
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+        update_cache: yes
+
+    - name: Create service user
+      user:
+        name: "{{ service_user }}"
+        system: true
+        create_home: false
+
+    - name: Create app directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ service_user }}"
+        group: "{{ service_group | default(service_user) }}"
+        mode: "0755"
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/src"
+        - "{{ app_dir }}/logs"
+
+    - name: Copy local app source to remote
+      copy:
+        src: "{{ local_app_src }}/"
+        dest: "{{ app_dir }}/src/"
+        owner: "{{ service_user }}"
+        group: "{{ service_group | default(service_user) }}"
+        mode: "0755"
+      notify: restart app
+
+    - name: Create virtualenv
+      command:
+        cmd: "python3 -m venv {{ venv_dir }}"
+        creates: "{{ venv_dir }}/bin/activate"
+
+    - name: Install Python dependencies (requirements.txt if present)
+      shell: |
+        set -e
+        if [ -f requirements.txt ]; then
+          "{{ venv_dir }}/bin/pip" install -r requirements.txt
+        else
+          echo "No requirements.txt found, skipping."
+        fi
+      args:
+        chdir: "{{ app_dir }}/src"
+
+    - name: Write environment file
+      template:
+        src: "./envfile.j2"
+        dest: "{{ app_dir }}/env"
+        owner: "{{ service_user }}"
+        group: "{{ service_group | default(service_user) }}"
+        mode: "0640"
+      notify: restart app
+
+    - name: Install systemd unit
+      template:
+        src: "./flask-dev.service.j2"
+        dest: "/etc/systemd/system/{{ app_name }}.service"
+        mode: "0644"
+      notify: daemon-reload
+
+    - name: Enable & start service
+      systemd:
+        name: "{{ app_name }}"
+        state: started
+        enabled: true

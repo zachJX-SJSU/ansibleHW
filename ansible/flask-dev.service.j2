@@ -1,0 +1,16 @@
+[Unit]
+Description={{ app_name }} Flask dev server (python app.py)
+After=network.target
+
+[Service]
+User={{ service_user }}
+Group={{ service_group | default(service_user) }}
+WorkingDirectory={{ app_dir }}/src
+EnvironmentFile={{ app_dir }}/env
+# Your app.py must bind to 0.0.0.0:8080
+ExecStart={{ venv_dir }}/bin/python {{ app_entry }}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

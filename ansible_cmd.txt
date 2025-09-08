@@ -1,0 +1,132 @@
+ubuntu@ip-172-31-45-22:~/ansible$  ansible-playbook site.yml -e app_state=present -e local_app_src=../hello_flask
+
+PLAY [Manage Flask app on EC2] *******************************************************************************************************************************************************************
+
+TASK [Ensure Python exists on fresh hosts] *******************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Gather facts] ******************************************************************************************************************************************************************************
+[WARNING]: Platform linux on host vm2 is using the discovered Python interpreter at /usr/bin/python3.12, but future installation of another Python interpreter could change the meaning of that
+path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [vm2]
+[WARNING]: Platform linux on host vm1 is using the discovered Python interpreter at /usr/bin/python3.12, but future installation of another Python interpreter could change the meaning of that
+path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [vm1]
+
+TASK [Stop service (undeploy)] *******************************************************************************************************************************************************************
+skipping: [vm1]
+skipping: [vm2]
+
+TASK [Disable service (undeploy)] ****************************************************************************************************************************************************************
+skipping: [vm1]
+skipping: [vm2]
+
+TASK [Remove systemd unit (undeploy)] ************************************************************************************************************************************************************
+skipping: [vm1]
+skipping: [vm2]
+
+TASK [Reload systemd (undeploy)] *****************************************************************************************************************************************************************
+skipping: [vm1]
+skipping: [vm2]
+
+TASK [Remove application directory (undeploy)] ***************************************************************************************************************************************************
+skipping: [vm1]
+skipping: [vm2]
+
+TASK [End play if undeploying] *******************************************************************************************************************************************************************
+skipping: [vm1]
+
+TASK [Install base packages] *********************************************************************************************************************************************************************
+ok: [vm2]
+changed: [vm1]
+
+TASK [Create service user] ***********************************************************************************************************************************************************************
+ok: [vm2]
+changed: [vm1]
+
+TASK [Create app directories] ********************************************************************************************************************************************************************
+changed: [vm1] => (item=/opt/hello-flask)
+changed: [vm2] => (item=/opt/hello-flask)
+changed: [vm1] => (item=/opt/hello-flask/src)
+changed: [vm2] => (item=/opt/hello-flask/src)
+changed: [vm1] => (item=/opt/hello-flask/logs)
+changed: [vm2] => (item=/opt/hello-flask/logs)
+
+TASK [Copy local app source to remote] ***********************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+TASK [Create virtualenv] *************************************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Install Python dependencies (requirements.txt if present)] *********************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Write environment file] ********************************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+TASK [Install systemd unit] **********************************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+TASK [Enable & start service] ********************************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+RUNNING HANDLER [daemon-reload] ******************************************************************************************************************************************************************
+ok: [vm2]
+ok: [vm1]
+
+RUNNING HANDLER [restart app] ********************************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+PLAY RECAP ***************************************************************************************************************************************************************************************
+vm1                        : ok=13   changed=11   unreachable=0    failed=0    skipped=5    rescued=0    ignored=0   
+vm2                        : ok=13   changed=9    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0   
+
+ubuntu@ip-172-31-45-22:~/ansible$ ansible-playbook site.yml -e app_state=absent
+
+PLAY [Manage Flask app on EC2] *******************************************************************************************************************************************************************
+
+TASK [Ensure Python exists on fresh hosts] *******************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Gather facts] ******************************************************************************************************************************************************************************
+[WARNING]: Platform linux on host vm1 is using the discovered Python interpreter at /usr/bin/python3.12, but future installation of another Python interpreter could change the meaning of that
+path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [vm1]
+[WARNING]: Platform linux on host vm2 is using the discovered Python interpreter at /usr/bin/python3.12, but future installation of another Python interpreter could change the meaning of that
+path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [vm2]
+
+TASK [Stop service (undeploy)] *******************************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+TASK [Disable service (undeploy)] ****************************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Remove systemd unit (undeploy)] ************************************************************************************************************************************************************
+changed: [vm2]
+changed: [vm1]
+
+TASK [Reload systemd (undeploy)] *****************************************************************************************************************************************************************
+ok: [vm1]
+ok: [vm2]
+
+TASK [Remove application directory (undeploy)] ***************************************************************************************************************************************************
+changed: [vm1]
+changed: [vm2]
+
+TASK [End play if undeploying] *******************************************************************************************************************************************************************
+
+PLAY RECAP ***************************************************************************************************************************************************************************************
+vm1                        : ok=7    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+vm2                        : ok=7    changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
